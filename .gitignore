@@ -11,6 +11,13 @@
 *.sln.docstates
 *.env
 
+# Secretos locales: nunca se versionan credenciales reales.
+# appsettings.json (base) solo trae placeholders; los valores reales de
+# desarrollo van en appsettings.Development.json, que se queda solo en la
+# máquina de cada quien.
+appsettings.Development.json
+appsettings.*.local.json
+
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 
