@@ -8,8 +8,11 @@ Este repositorio centraliza todo lo versionado del proyecto que hasta ahora viv�
 
 - **Código fuente** de `ApiKnowledge` — la API en .NET 8 que expone autenticación (SQL Server), consulta de ventas por vistas (SQL Server) y búsqueda semántica/RAG (PostgreSQL + pgvector).
 - **Documentación técnica** de esa API: cómo está armada, sus modelos, su estándar de respuesta (`ApiResponseModel<T>`), etc.
-- **Documentación de instalaciones**: cómo levantar el entorno local (Docker, PostgreSQL + pgvector, etc.).
+- **Workflows de n8n**: pruebas con Gemini, con LM Studio (IA 100% local), y el **Copiloto con Chat + AI Agent** que decide solo qué herramienta usar — con toda la lista de problemas reales encontrados y cómo se resolvieron (léanla si algo similar les falla a ustedes).
+- **Documentación de instalaciones**: cómo levantar el entorno local (Docker, PostgreSQL + pgvector, LM Studio, etc.).
 - **Investigación abierta** sobre cómo se comunican en línea la base transaccional (SQL Server) y la base vectorial (Postgres) — todavía **sin decisión cerrada**.
+
+**¿Algo te está fallando con n8n, LM Studio o el AI Agent?** Antes de investigar desde cero, revisa `documentacion/N8N-Workflow-Copiloto-IA-Agent.md` — tiene una lista de problemas reales ya encontrados (con el mensaje de error exacto de cada uno) y su solución.
 
 ## Estructura del repositorio
 
@@ -19,10 +22,20 @@ proyecto-ia-documentacion/
 ├── .gitignore
 ├── documentacion/
 │   ├── ApiKnowledge-Guia-Implementacion.md       (arquitectura real de ApiKnowledge)
-│   └── SINCRONIZACION_SQLSERVER_POSTGRES.md      (investigación abierta, no una decisión cerrada)
+│   ├── SINCRONIZACION_SQLSERVER_POSTGRES.md      (investigación abierta, no una decisión cerrada)
+│   ├── N8N-Workflow-IA-Generativa.md             (workflow de prueba con Gemini: login, embeddings, busqueda semantica, ventas)
+│   ├── N8N-Workflow-LM-Studio.md                 (misma prueba pero con LM Studio, IA 100% local — choque de dimensiones con Postgres)
+│   └── N8N-Workflow-Copiloto-IA-Agent.md         (Chat + AI Agent que decide solo que herramienta usar — 7 problemas reales documentados con su solucion)
 ├── instalaciones/
 │   ├── POSTGRES_SETUP.md                         (cómo levantar Postgres + pgvector en Docker)
-│   └── docker-compose.yml
+│   ├── docker-compose.yml
+│   └── N8N_SETUP.md                              (cómo levantar n8n en Docker)
+├── n8n/
+│   ├── ia-generativa-local.workflow.json
+│   ├── lm-studio-local.workflow.json
+│   ├── copiloto-ia-generativa.workflow.json
+│   ├── tool-buscar-conocimiento.workflow.json
+│   └── tool-consultar-ventas.workflow.json
 └── ApiKnowledge/
     └── ApiKnowledge/                              (código fuente del proyecto .NET 8)
 ```

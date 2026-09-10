@@ -42,7 +42,9 @@ El modelo de embeddings que trae LM Studio integrado (`text-embedding-nomic-embe
 
 **Si es solo para pruebas de embeddings con LM Studio** (como este workflow), no hace falta cambiar nada — basta con tener en cuenta el choque de dimensiones y esperar que `Indexar`/`Buscar` fallen con el error 400 de arriba. Es el comportamiento esperado, no un bug.
 
-**Si se quiere usar LM Studio de verdad** (no solo probar) como proveedor de embeddings, sí hay que cambiar la base: la columna `embedding` de `conocimiento_documento` pasaría de `VECTOR(1536)` a `VECTOR(768)`. Una columna `vector` de pgvector solo acepta una dimensión fija para todas las filas — **si para ese momento ya hay documentos indexados con Gemini (1536 dims), ese cambio los rompería**, porque no se pueden mezclar vectores de distinta dimensión en la misma columna; habría que re-indexarlos con el nuevo modelo, o mantener tablas separadas (una por proveedor). Ninguna de estas dos opciones está implementada todavía.
+**Si se quiere usar LM Studio de verdad** (no solo probar) como proveedor de embeddings, sí hay que cambiar la base: la columna `embedding` de `conocimiento_documento` pasa de `VECTOR(1536)` a `VECTOR(768)`. Una columna `vector` de pgvector solo acepta una dimensión fija para todas las filas — **si ya hay documentos indexados con Gemini (1536 dims), ese cambio los rompe**, porque no se pueden mezclar vectores de distinta dimensión en la misma columna; hay que re-indexarlos con el nuevo modelo, o mantener tablas separadas (una por proveedor).
+
+**Estado actual (a la fecha de este documento)**: la columna **ya se cambió a `VECTOR(768)`** para probar esto de verdad — se confirmó que el flujo completo (`Login → Indexar → Buscar`) funciona igual de bien con LM Studio que con Gemini, similitud semántica real incluida. Como consecuencia, **el workflow de Gemini (`ia-generativa-local`) no va a funcionar mientras la columna siga en 768** (mismo error, al revés: esperaría 1536 y Gemini se lo daría). Si van a seguir con Gemini como proveedor principal, hay que volver a poner la columna en `VECTOR(1536)` (y vaciar la tabla primero, por la misma razón de arriba) — todavía no se ha decidido/revertido.
 
 Otras alternativas que no requieren tocar Postgres, ninguna implementada todavía:
 
@@ -71,4 +73,4 @@ Importante no confundir **LM Studio** con **"OpenAI API"** — aunque LM Studio 
 ## Notas
 
 - El usuario de prueba (`Login`) usado aquí es el mismo `deved04` que se comparte con el equipo (ver el link de un solo uso) — confirmado funcionando.
-- Esta es la razón concreta por la que, por ahora, **Gemini sigue siendo el proveedor de embeddings** en el flujo de Conocimiento — no por preferencia, sino porque es el que ya coincide con la dimensión configurada en Postgres.
+- **Actualización**: después de este workflow se cambió la columna de Postgres a `VECTOR(768)` para probar el flujo completo de verdad, y se armó un **AI Agent con Chat** que sí usa LM Studio de punta a punta (modelo de chat + embeddings + herramientas) — ver `N8N-Workflow-Copiloto-IA-Agent.md`, que también documenta varios problemas reales encontrados al armar eso (tool-calling, credenciales, activación de sub-workflows, alucinaciones, etc.) — es el documento más completo de "cosas que salieron mal y cómo se arreglaron" de todo el repo.

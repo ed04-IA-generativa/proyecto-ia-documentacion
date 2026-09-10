@@ -1,0 +1,66 @@
+{
+  "name": "Tool - Consultar Ventas",
+  "nodes": [
+    {
+      "id": "4d019aa4-b0f8-447d-bd9c-a0af7e712922",
+      "name": "Cuando se llama esta herramienta",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300],
+      "parameters": {
+        "inputSource": "workflowInputs",
+        "workflowInputs": {
+          "values": [
+            { "name": "fechaInicio", "type": "string" },
+            { "name": "fechaFin", "type": "string" },
+            { "name": "cliente", "type": "string" },
+            { "name": "producto", "type": "string" },
+            { "name": "tipoCanal", "type": "string" },
+            { "name": "topN", "type": "string" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "a92eb337-9683-4554-871e-8cbd9ba8aa7d",
+      "name": "Login",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [460, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://host.docker.internal:7225/api/auth/login",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": { "pOpcion": 1, "pUserName": "<usuario>", "pPass": "<contraseña>" },
+        "options": { "allowUnauthorizedCerts": true }
+      }
+    },
+    {
+      "id": "316573dd-355a-4fc6-995d-c243f8a4599a",
+      "name": "Consultar Ventas",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [680, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://host.docker.internal:7225/api/v1/ventas/consultar",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "Authorization", "value": "=Bearer {{ $('Login').item.json.data[0].token }}" }]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { 'fechaInicio': $('Cuando se llama esta herramienta').item.json.fechaInicio || null, 'fechaFin': $('Cuando se llama esta herramienta').item.json.fechaFin || null, 'cliente': $('Cuando se llama esta herramienta').item.json.cliente, 'producto': $('Cuando se llama esta herramienta').item.json.producto, 'tipoCanal': $('Cuando se llama esta herramienta').item.json.tipoCanal, 'topN': $('Cuando se llama esta herramienta').item.json.topN ? Number($('Cuando se llama esta herramienta').item.json.topN) : 10 } }}",
+        "options": { "allowUnauthorizedCerts": true }
+      }
+    }
+  ],
+  "connections": {
+    "Cuando se llama esta herramienta": { "main": [[{ "node": "Login", "type": "main", "index": 0 }]] },
+    "Login": { "main": [[{ "node": "Consultar Ventas", "type": "main", "index": 0 }]] }
+  },
+  "pinData": {},
+  "settings": { "executionOrder": "v1" },
+  "meta": { "instanceId": "local-only" }
+}

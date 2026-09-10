@@ -28,7 +28,20 @@ lms get "https://huggingface.co/ggml-org/Qwen2.5-VL-3B-Instruct-GGUF"
 
 Ese es el modelo que usó "Bionic": **Qwen2.5-VL-3B-Instruct** — un modelo de 3 mil millones de parámetros, "VL" (Vision-Language, entiende texto e imágenes), cuantizado a formato GGUF para correr en hardware normal (~3.3 GB en disco).
 
-Verificar que quedó descargado:
+⚠️ **Si van a usar el modelo como cerebro de un AI Agent (con herramientas/tools en n8n), no usen este modelo VL** — se probó y **no hace tool-calling de forma confiable** (nunca llega a ejecutar la herramienta, solo dice en texto que "la usaría"). El detalle completo de esa prueba está en `documentacion/N8N-Workflow-Copiloto-IA-Agent.md`. Para eso, descarguen también la versión de solo texto, mismo tamaño:
+
+```powershell
+lms get "https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF"
+```
+
+**`Qwen2.5-3B-Instruct`** (sin la "VL", sin visión) — mismos 3B de parámetros, pero sí confirmado funcionando para tool-calling con el AI Agent de n8n. Resumen de cuándo usar cada uno:
+
+| Modelo | Úsalo para |
+|---|---|
+| `qwen2.5-vl-3b-instruct` | Chat simple, o tareas que necesiten entender imágenes |
+| `qwen2.5-3b-instruct` | AI Agent con herramientas (tool-calling) — el que usa el workflow "Copiloto IA Generativa" |
+
+Verificar que quedaron descargados:
 
 ```powershell
 lms ls
@@ -44,9 +57,11 @@ LM Studio trae integrado un modelo de embeddings, no hace falta descargarlo apar
 
 ```powershell
 lms server start
-lms load "qwen2.5-vl-3b-instruct"
+lms load "qwen2.5-3b-instruct"
 lms load "text-embedding-nomic-embed-text-v1.5"
 ```
+
+(Carga `qwen2.5-3b-instruct`, no el VL, si lo van a usar con el AI Agent — ver la tabla de arriba. Si solo necesitan chat simple, pueden cargar `qwen2.5-vl-3b-instruct` en su lugar.)
 
 El primer comando levanta el servidor HTTP (por defecto en el puerto **1234**, aunque puede variar — revisar con `lms server status` o en la pestaña "Developer" de la app). Los siguientes cargan cada modelo en memoria; sin este paso el servidor está arriba pero no puede responder peticiones para ese modelo. Se pueden tener varios modelos cargados a la vez (uno de chat y uno de embeddings, por ejemplo).
 
@@ -61,7 +76,7 @@ curl http://localhost:1234/v1/models
 Y una petición de chat real:
 
 ```powershell
-curl http://localhost:1234/v1/chat/completions -H "Content-Type: application/json" -d "{\"model\": \"qwen2.5-vl-3b-instruct\", \"messages\": [{\"role\": \"user\", \"content\": \"Responde solo con la palabra: funciona\"}], \"max_tokens\": 20}"
+curl http://localhost:1234/v1/chat/completions -H "Content-Type: application/json" -d "{\"model\": \"qwen2.5-3b-instruct\", \"messages\": [{\"role\": \"user\", \"content\": \"Responde solo con la palabra: funciona\"}], \"max_tokens\": 20}"
 ```
 
 Si responde con un JSON tipo `chat.completion` y el texto generado, todo está funcionando.

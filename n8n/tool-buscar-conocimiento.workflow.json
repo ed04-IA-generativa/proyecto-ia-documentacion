@@ -1,0 +1,72 @@
+{
+  "name": "Tool - Buscar Conocimiento",
+  "nodes": [
+    {
+      "id": "10c8d3d2-795b-4aed-b9ed-5bc621031587",
+      "name": "Cuando se llama esta herramienta",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300],
+      "parameters": {
+        "inputSource": "workflowInputs",
+        "workflowInputs": { "values": [{ "name": "pregunta", "type": "string" }] }
+      }
+    },
+    {
+      "id": "914317a4-2f08-405d-9494-47f7fdec42f3",
+      "name": "Login",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [460, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://host.docker.internal:7225/api/auth/login",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": { "pOpcion": 1, "pUserName": "<usuario>", "pPass": "<contraseña>" },
+        "options": { "allowUnauthorizedCerts": true }
+      }
+    },
+    {
+      "id": "f2a278ff-bc46-4b35-bda5-89c7fdae9774",
+      "name": "Generar Embedding",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [680, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:1234/v1/embeddings",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { 'model': 'text-embedding-nomic-embed-text-v1.5', 'input': $('Cuando se llama esta herramienta').item.json.pregunta } }}"
+      }
+    },
+    {
+      "id": "338d7a54-fd0c-4146-bb0e-a9f9a0934eff",
+      "name": "Buscar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [900, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://host.docker.internal:7225/api/v1/conocimiento/buscar",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "Authorization", "value": "=Bearer {{ $('Login').item.json.data[0].token }}" }]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { 'embedding': $json.data[0].embedding, 'modulo': 'Inventario', 'topN': 3 } }}",
+        "options": { "allowUnauthorizedCerts": true }
+      }
+    }
+  ],
+  "connections": {
+    "Cuando se llama esta herramienta": { "main": [[{ "node": "Login", "type": "main", "index": 0 }]] },
+    "Login": { "main": [[{ "node": "Generar Embedding", "type": "main", "index": 0 }]] },
+    "Generar Embedding": { "main": [[{ "node": "Buscar", "type": "main", "index": 0 }]] }
+  },
+  "pinData": {},
+  "settings": { "executionOrder": "v1" },
+  "meta": { "instanceId": "local-only" }
+}

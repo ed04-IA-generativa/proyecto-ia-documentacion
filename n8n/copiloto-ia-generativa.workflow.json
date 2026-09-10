@@ -1,0 +1,108 @@
+{
+  "name": "Copiloto IA Generativa",
+  "nodes": [
+    {
+      "parameters": { "options": { "responseMode": "streaming" } },
+      "id": "5fbd2176-af41-4f33-941f-733503072340",
+      "name": "Chat",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [240, 304]
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "Eres el copiloto de IA de ProyectOne/DMS. Tienes dos herramientas: \"Buscar Conocimiento\" (busqueda semantica sobre documentacion indexada) y \"Consultar Ventas\" (datos EXACTOS de ventas reales: fecha, cliente, producto, cantidad, monto, canal).\n\nReglas estrictas:\n1. NUNCA inventes datos, productos, cifras o resultados. Tu unica fuente de verdad son las herramientas.\n2. Si el usuario no menciona fechas, cliente, producto o canal especificos, deja esos parametros VACIOS al llamar la herramienta - NO inventes valores de ejemplo ni fechas al azar.\n3. Si una herramienta devuelve una lista vacia de resultados, dilo explicitamente (\"no encontre resultados con esos filtros\"). Nunca afirmes que hay un resultado si el arreglo 'data' viene vacio.\n4. Elige la herramienta correcta segun la pregunta: Consultar Ventas para datos exactos, Buscar Conocimiento para preguntas conceptuales.\n5. Responde siempre en espanol, de forma clara y concisa."
+        }
+      },
+      "id": "a152d6f7-d2d5-4018-ab11-e79fb88e9ae8",
+      "name": "Copiloto IA",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [464, 304]
+    },
+    {
+      "parameters": {
+        "model": { "__rl": true, "mode": "id", "value": "qwen2.5-3b-instruct", "cachedResultName": "qwen2.5-3b-instruct" },
+        "responsesApiEnabled": false,
+        "options": {}
+      },
+      "id": "aade5997-fdd6-4096-a898-525b58eef1c6",
+      "name": "LM Studio (Chat Model)",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [352, 512],
+      "credentials": { "openAiApi": { "name": "LM Studio Local" } }
+    },
+    {
+      "parameters": { "contextWindowLength": 10 },
+      "id": "c6522a72-0ca4-488b-83f2-8aa9bd0c97eb",
+      "name": "Memoria de conversacion",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [512, 512]
+    },
+    {
+      "parameters": {
+        "description": "Busca informacion en la base de conocimiento (documentacion indexada) usando busqueda semantica. Usala cuando el usuario pregunte algo conceptual o de documentacion, no para datos exactos de ventas.",
+        "workflowId": { "__rl": true, "mode": "id", "value": "<id-del-workflow-Tool-Buscar-Conocimiento>" },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": { "pregunta": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('pregunta', 'La pregunta o tema a buscar, en lenguaje natural') }}" },
+          "matchingColumns": [],
+          "schema": [{ "id": "pregunta", "displayName": "pregunta", "required": false, "defaultMatch": false, "display": true, "canBeUsedToMatch": true, "type": "string" }],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "id": "057d0fcd-6336-49b5-980c-1bed072d5fed",
+      "name": "Buscar Conocimiento",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [672, 512]
+    },
+    {
+      "parameters": {
+        "description": "Consulta datos EXACTOS de ventas reales (fecha, cliente, producto, cantidad, monto, canal). Usala cuando el usuario pida datos concretos de ventas, no para preguntas generales.",
+        "workflowId": { "__rl": true, "mode": "id", "value": "<id-del-workflow-Tool-Consultar-Ventas>" },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "fechaInicio": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('fechaInicio', 'Fecha de inicio del rango, formato YYYY-MM-DD, opcional') }}",
+            "fechaFin": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('fechaFin', 'Fecha de fin del rango, formato YYYY-MM-DD, opcional') }}",
+            "cliente": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('cliente', 'Nombre del cliente a filtrar, opcional') }}",
+            "producto": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('producto', 'Nombre o parte del nombre del producto a filtrar, opcional') }}",
+            "tipoCanal": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('tipoCanal', 'Canal de venta (ej. RUTAS PROPIAS, DISTRIBUIDORAS PROPIAS, MAYORISTAS), opcional') }}",
+            "topN": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('topN', 'Cantidad maxima de resultados a devolver, por defecto 10') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            { "id": "fechaInicio", "displayName": "fechaInicio", "required": false, "defaultMatch": false, "display": true, "canBeUsedToMatch": true, "type": "string" },
+            { "id": "fechaFin", "displayName": "fechaFin", "required": false, "defaultMatch": false, "display": true, "canBeUsedToMatch": true, "type": "string" },
+            { "id": "cliente", "displayName": "cliente", "required": false, "defaultMatch": false, "display": true, "canBeUsedToMatch": true, "type": "string" },
+            { "id": "producto", "displayName": "producto", "required": false, "defaultMatch": false, "display": true, "canBeUsedToMatch": true, "type": "string" },
+            { "id": "tipoCanal", "displayName": "tipoCanal", "required": false, "defaultMatch": false, "display": true, "canBeUsedToMatch": true, "type": "string" },
+            { "id": "topN", "displayName": "topN", "required": false, "defaultMatch": false, "display": true, "canBeUsedToMatch": true, "type": "string" }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "id": "e5e52440-d472-4327-8722-ae759c281c0f",
+      "name": "Consultar Ventas",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [832, 512]
+    }
+  ],
+  "connections": {
+    "Chat": { "main": [[{ "node": "Copiloto IA", "type": "main", "index": 0 }]] },
+    "LM Studio (Chat Model)": { "ai_languageModel": [[{ "node": "Copiloto IA", "type": "ai_languageModel", "index": 0 }]] },
+    "Memoria de conversacion": { "ai_memory": [[{ "node": "Copiloto IA", "type": "ai_memory", "index": 0 }]] },
+    "Buscar Conocimiento": { "ai_tool": [[{ "node": "Copiloto IA", "type": "ai_tool", "index": 0 }]] },
+    "Consultar Ventas": { "ai_tool": [[{ "node": "Copiloto IA", "type": "ai_tool", "index": 0 }]] }
+  },
+  "pinData": {},
+  "settings": { "executionOrder": "v1" },
+  "meta": { "instanceId": "local-only" }
+}
