@@ -1,0 +1,165 @@
+{
+  "name": "ia-generativa-local",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "3f5273ab-6973-40b4-9818-c32409552f14",
+      "name": "Start",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 304]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://host.docker.internal:7225/api/auth/login",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": {
+          "pOpcion": 1,
+          "pUserName": "<usuario>",
+          "pPass": "<contraseña>"
+        },
+        "options": { "allowUnauthorizedCerts": true }
+      },
+      "id": "add09d3a-69d7-4405-b7a9-85801b8cd5c2",
+      "name": "Login",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [432, 304]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://host.docker.internal:7225/api/v1/conocimiento/buscar",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $('Login').item.json.data[0].token }}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"embedding\": $json.embedding.values, \"modulo\": \"Inventario\", \"topN\": 5 } }}",
+        "options": { "allowUnauthorizedCerts": true }
+      },
+      "id": "fd65dde4-c093-4403-abd4-f43d64e43fa2",
+      "name": "Buscar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [848, 304]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"content\":{\"parts\":[{\"text\":\"¿cuantos productos tenemos registrados y cual es el nombre del producto con sku 7?\"}]},\"outputDimensionality\":1536}",
+        "options": {}
+      },
+      "id": "d9dc38b6-22d1-472e-843b-f283d6756a53",
+      "name": "Generar Embedding (Buscar)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [704, 304],
+      "credentials": {
+        "httpQueryAuth": { "name": "Gemini API Key" }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": {
+          "content": { "parts": [{ "text": "Sección de ferretería: martillos, destornilladores, llaves inglesas y pinzas para trabajos generales" }] },
+          "outputDimensionality": 1536
+        },
+        "options": {}
+      },
+      "id": "0920deb1-899b-469c-be97-5538f76ed47c",
+      "name": "Generar Embedding (Indexar)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [512, 512],
+      "credentials": {
+        "httpQueryAuth": { "name": "Gemini API Key" }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://host.docker.internal:7225/api/v1/conocimiento/documentos",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $('Login').item.json.data[0].token }}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"modulo\": \"Inventario\", \"tipoDocumento\": \"Categoria\", \"referenciaId\": \"1\", \"contenido\": \"Sección de ferretería: martillos, destornilladores, llaves inglesas y pinzas para trabajos generales\", \"embedding\": $json.embedding.values } }}",
+        "options": { "allowUnauthorizedCerts": true }
+      },
+      "id": "5e961fa3-0b7c-41f3-abc2-0a7594585821",
+      "name": "Indexar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [848, 512]
+    },
+    {
+      "id": "efb57f82-b4d4-4e72-8729-570193942ae7",
+      "name": "Consultar Ventas",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [704, 700],
+      "parameters": {
+        "method": "POST",
+        "url": "https://host.docker.internal:7225/api/v1/ventas/consultar",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $('Login').item.json.data[0].token }}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"topN\": 10 } }}",
+        "options": { "allowUnauthorizedCerts": true }
+      }
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [[{ "node": "Login", "type": "main", "index": 0 }]]
+    },
+    "Login": {
+      "main": [[
+        { "node": "Generar Embedding (Indexar)", "type": "main", "index": 0 },
+        { "node": "Consultar Ventas", "type": "main", "index": 0 }
+      ]]
+    },
+    "Generar Embedding (Indexar)": {
+      "main": [[{ "node": "Indexar", "type": "main", "index": 0 }]]
+    },
+    "Indexar": {
+      "main": [[{ "node": "Generar Embedding (Buscar)", "type": "main", "index": 0 }]]
+    },
+    "Generar Embedding (Buscar)": {
+      "main": [[{ "node": "Buscar", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "instanceId": "local-only"
+  }
+}
