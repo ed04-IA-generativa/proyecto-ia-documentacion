@@ -37,7 +37,7 @@ Todos los nodos que llaman a ApiKnowledge (`Login`, `Buscar`, `Indexar`, `Consul
 ## Cómo se construyó (pasos seguidos)
 
 1. Se armó la cadena `Start → Login → Generar Embedding (Indexar) → Indexar → Generar Embedding (Buscar) → Buscar` para probar el flujo de indexado + búsqueda semántica end-to-end, con texto de indexado y de búsqueda sin overlap de palabras (prueba real de similitud semántica, no de coincidencia léxica).
-2. Una vez que ApiKnowledge agregó el módulo Ventas (`ViewQueryExecutor` + `VentasController`, ver `ApiKnowledge-Guia-Implementacion.md`), se agregó un nodo **HTTP Request** nuevo llamado **Consultar Ventas**, conectado directamente desde la salida de `Login` (sin tocar ningún nodo existente) — mismo patrón que los demás nodos que llaman a ApiKnowledge: método `POST`, header `Authorization` con el token de `Login`, y `allowUnauthorizedCerts` activado.
+2. Una vez que ApiKnowledge agregó el módulo Ventas (`ViewQueryExecutor` + `VentasController`, ver `ApiKnowledge-Guia-Implementacion.md`), se agregó el nodo **Consultar Ventas** vía el MCP de n8n (`update_workflow`, operaciones `addNode` + `addConnection`), colgado directamente de `Login` — sin tocar ningún nodo existente.
 
 ## Cómo importar este workflow en otra instancia de n8n
 
