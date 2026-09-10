@@ -1,0 +1,152 @@
+{
+  "name": "lm-studio-local",
+  "nodes": [
+    {
+      "id": "59de0606-96a5-42f3-80c6-fb67da875dea",
+      "name": "Start",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "parameters": {}
+    },
+    {
+      "id": "5761dd07-b552-4de7-bf77-0e7189748748",
+      "name": "Login",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [432, 304],
+      "parameters": {
+        "method": "POST",
+        "url": "https://host.docker.internal:7225/api/auth/login",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": { "pOpcion": 1, "pUserName": "<usuario>", "pPass": "<contraseña>" },
+        "options": { "allowUnauthorizedCerts": true }
+      }
+    },
+    {
+      "id": "1ad4fa9e-e454-4696-a648-667090f24275",
+      "name": "Generar Embedding LM Studio (Indexar)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [512, 512],
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:1234/v1/embeddings",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": {
+          "model": "text-embedding-nomic-embed-text-v1.5",
+          "input": "Sección de ferretería: martillos, destornilladores, llaves inglesas y pinzas para trabajos generales"
+        }
+      }
+    },
+    {
+      "id": "ab38a140-04cc-408f-bab1-2b549128d99a",
+      "name": "Indexar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [848, 512],
+      "parameters": {
+        "method": "POST",
+        "url": "https://host.docker.internal:7225/api/v1/conocimiento/documentos",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $('Login').item.json.data[0].token }}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"modulo\": \"Inventario\", \"tipoDocumento\": \"Categoria\", \"referenciaId\": \"1-lmstudio\", \"contenido\": \"Sección de ferretería: martillos, destornilladores, llaves inglesas y pinzas para trabajos generales\", \"embedding\": $json.data[0].embedding } }}",
+        "options": { "allowUnauthorizedCerts": true }
+      }
+    },
+    {
+      "id": "5344baf2-1576-4ad1-ad2b-b3557240e6c6",
+      "name": "Generar Embedding LM Studio (Buscar)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [704, 304],
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:1234/v1/embeddings",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": {
+          "model": "text-embedding-nomic-embed-text-v1.5",
+          "input": "¿cuantos productos tenemos registrados y cual es el nombre del producto con sku 7?"
+        }
+      }
+    },
+    {
+      "id": "6e473020-d665-4027-9008-024af03a1ade",
+      "name": "Buscar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [1024, 304],
+      "parameters": {
+        "method": "POST",
+        "url": "https://host.docker.internal:7225/api/v1/conocimiento/buscar",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $('Login').item.json.data[0].token }}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"embedding\": $json.data[0].embedding, \"modulo\": \"Inventario\", \"topN\": 5 } }}",
+        "options": { "allowUnauthorizedCerts": true }
+      }
+    },
+    {
+      "id": "f0007b44-ebd3-410f-aa39-72fbb1df6776",
+      "name": "Consultar Ventas",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [432, 700],
+      "parameters": {
+        "method": "POST",
+        "url": "https://host.docker.internal:7225/api/v1/ventas/consultar",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $('Login').item.json.data[0].token }}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"topN\": 10 } }}",
+        "options": { "allowUnauthorizedCerts": true }
+      }
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [[{ "node": "Login", "type": "main", "index": 0 }]]
+    },
+    "Login": {
+      "main": [[
+        { "node": "Generar Embedding LM Studio (Indexar)", "type": "main", "index": 0 },
+        { "node": "Consultar Ventas", "type": "main", "index": 0 }
+      ]]
+    },
+    "Generar Embedding LM Studio (Indexar)": {
+      "main": [[{ "node": "Indexar", "type": "main", "index": 0 }]]
+    },
+    "Indexar": {
+      "main": [[{ "node": "Generar Embedding LM Studio (Buscar)", "type": "main", "index": 0 }]]
+    },
+    "Generar Embedding LM Studio (Buscar)": {
+      "main": [[{ "node": "Buscar", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "instanceId": "local-only"
+  }
+}
