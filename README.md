@@ -23,6 +23,7 @@ proyecto-ia-documentacion/
 ├── documentacion/
 │   ├── ApiKnowledge-Guia-Implementacion.md       (arquitectura real de ApiKnowledge)
 │   ├── SINCRONIZACION_SQLSERVER_POSTGRES.md      (investigación abierta, no una decisión cerrada)
+│   ├── PROPUESTA-Sincronizacion-Ventas-Vectorial.md (propuesta concreta: watermark + diagrama, no implementada)
 │   ├── N8N-Workflow-IA-Generativa.md             (workflow de prueba con Gemini: login, embeddings, busqueda semantica, ventas)
 │   ├── N8N-Workflow-LM-Studio.md                 (misma prueba pero con LM Studio, IA 100% local — choque de dimensiones con Postgres)
 │   └── N8N-Workflow-Copiloto-IA-Agent.md         (Chat + AI Agent que decide solo que herramienta usar — 7 problemas reales documentados con su solucion)

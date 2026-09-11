@@ -108,24 +108,53 @@ lms load "qwen2.5-3b-instruct"
 
 **Causa real**: `proyIA.viwConsultaVentas` hace JOIN de más de una decena de tablas (ver `N8N-Workflow-IA-Generativa.md`). Sin un filtro de fecha que acote el rango, SQL Server tiene que evaluar un volumen de filas mucho mayor, y el tiempo de espera configurado no alcanza.
 
-**Estado**: **no resuelto todavía** — es un límite real de rendimiento de la vista/consulta, no de la integración con n8n/LM Studio. Se reprodujo de forma consistente en varias pruebas: cualquier pregunta sin fecha específica (ej. "dame ventas recientes", "sin filtros, dame 3 ventas") dispara este mismo timeout de ~30 segundos. Queda como trabajo pendiente, con algunas opciones a evaluar (no implementadas):
-- Que el copiloto siempre mande un rango de fechas razonable por defecto (ej. últimos 30 días) en vez de dejarlo abierto, en vez de resolverlo a nivel de base de datos.
-- Aumentar el `CommandTimeout` de `ViewQueryExecutor` para consultas sin filtro de fecha.
-- Revisar índices de la vista/tablas base para consultas sin filtro de fecha.
+**Estado**: ✅ **Resuelto** — diagnosticado con `SET STATISTICS IO/TIME ON` contra la base real antes de tocar nada. El culpable no era falta de índice (`INX_Fecha_Documento` ya existía) sino el patrón `(@fechaInicio IS NULL OR Fecha_Documento >= @fechaInicio)`: SQL Server compila un solo plan válido para cualquier combinación de nulos, y con ese patrón casi siempre descarta el índice — es un anti-patrón conocido ("parámetros opcionales"/"dynamic search conditions"). La corrección, en `VentasService.ConsultarVentas` (ApiKnowledge):
 
-⚠️ **Ojo con un detalle al leer la respuesta del copiloto en este caso**: cuando la herramienta falla por este timeout, el copiloto responde algo como *"No encontré resultados con esos filtros"* — la misma frase que usa cuando la consulta sí corrió bien pero genuinamente no hay filas que coincidan (ver el problema anterior, el de la alucinación). **No es lo mismo**: una cosa es "no hay datos con esos filtros" (la herramienta funcionó) y otra es "la herramienta falló/tardó demasiado" (este problema). El `systemMessage` actual no distingue entre ambos casos al redactar la respuesta final — por ahora, para saber cuál pasó de verdad hay que revisar la ejecución en n8n (si `Consultar Ventas` tardó ~30s y salió en rojo con `executionStatus: "error"`, fue timeout; si corrió rápido y en verde con `data: []`, sí fue una búsqueda legítima sin resultados). Ajustar el prompt para que el copiloto distingua y comunique esta diferencia al usuario queda pendiente también.
+1. **Rango de fechas por defecto**: si no viene `fechaInicio`/`fechaFin`, se usa "últimos 30 días" en vez de dejar la consulta sin ningún límite — el filtro de fecha deja de ser opcional en el SQL.
+2. **`OPTION (RECOMPILE)`** agregado a la consulta — para las demás opciones (`cliente`, `producto`, `tipoCanal`, que sí siguen siendo opcionales de verdad) obliga a SQL Server a armar el plan según los valores reales de cada llamada, en vez de un plan genérico.
 
-## Qué preguntas funcionan bien ahora mismo (y cuáles no)
+**Resultado medido** (mismo `SET STATISTICS IO`, mismo escenario sin fechas explícitas): `tbl_Documento` pasó de **87,347 lecturas lógicas a 3**; el tiempo de la consulta en SQL Server pasó de ~16.7s a ~0-2ms. Probado también de punta a punta por el chat real (n8n → ApiKnowledge → SQL Server): la misma pregunta que antes tardaba ~30s y terminaba en timeout ahora responde en ~1.4s, sin error.
 
+No fue necesario tocar el esquema de la base de datos ni pedirle nada al DBA — todo el arreglo vive en el código C# de ApiKnowledge.
+
+### 8. El agente usa "Buscar Conocimiento" para preguntas que en realidad son de Ventas
+
+**Síntoma**: pregunta real hecha en el chat: *"Que unidad de medida tiene el producto 20715-Tipo Taxisco rallado de 100g"*. El copiloto respondió *"No se encontraron resultados específicos sobre la unidad de medida del producto..."* — a pesar de que ese producto sí tiene ventas reales en la base de datos.
+
+**Causa real**: revisando la ejecución, el agente había llamado **`Buscar Conocimiento`** (búsqueda semántica sobre documentación indexada) en vez de **`Consultar Ventas`** (datos exactos). El módulo de Conocimiento solo tiene un documento de prueba indexado, sin relación con este producto — por eso "no encontró resultados", pero por la razón equivocada: la pregunta nunca debió ir a esa herramienta. El `systemMessage` original solo describía las herramientas por su función general, sin dar una regla explícita de cuándo usar cada una para preguntas de atributos de producto redactadas de forma conceptual ("qué unidad de medida tiene...", en vez de "dame los datos de venta de...").
+
+**Solución**: se reescribió el `systemMessage` del agente `Copiloto IA` con una regla explícita de selección de herramienta, incluyendo un ejemplo concreto:
+> *"Usa 'Consultar Ventas' para CUALQUIER pregunta sobre un producto, cliente, venta o transacción específico y sus datos (precio, cantidad, unidad de medida, fecha, canal, etc.) — aunque la pregunta esté redactada de forma conceptual [...]. Usa 'Buscar Conocimiento' SOLO para preguntas sobre documentación general del negocio (procesos, políticas, definiciones) que no se refieran a un producto/cliente/venta puntual."*
+
+Con este cambio, la misma pregunta hizo que el agente llamara correctamente a `Consultar Ventas`.
+
+**Lección general**: con un AI Agent que tiene varias herramientas parecidas en propósito, no basta con describir "qué hace" cada una en el `systemMessage` — hay que decir explícitamente **cuándo elegir una sobre otra**, con al menos un ejemplo de una pregunta ambigua resuelta. La descripción de la herramienta (`toolDescription`) sola no fue suficiente para que el modelo distinguiera los casos límite.
+
+### 9. Con la herramienta correcta y fechas ya arregladas, la consulta sigue devolviendo cero filas
+
+**Síntoma**: después de arreglar el problema #8, la misma pregunta sobre el producto 20715 seguía respondiendo "no encontré resultados", aun dándole al agente un rango de fechas explícito que sí tiene datos reales.
+
+**Causa real**: el arreglo del problema #6 (convertir `""` a `null` en el `jsonBody` de `Tool - Consultar Ventas`) solo se había aplicado a `fechaInicio`/`fechaFin`, no a `cliente`, `producto` ni `tipoCanal`. Cuando el agente deja `tipoCanal` sin mencionar, igual llega como `""` (string vacío), no como `null`. Eso no rompe la deserialización (a diferencia de las fechas), porque `TipoCanal` es `string?` — pero en el SQL, el filtro es `(@tipoCanal IS NULL OR TipoCanalDescripcion = @tipoCanal)`: con `@tipoCanal = ''`, la condición dentro del `OR` se evalúa (`'' IS NULL` es falso) y ninguna fila real tiene `TipoCanalDescripcion = ''`, así que el filtro termina excluyendo **todas** las filas — mucho más silencioso que el error 400 de las fechas, porque la consulta no falla, simplemente devuelve `data: []` como si de verdad no hubiera resultados. Se confirmó corriendo el mismo SQL directo contra SQL Server con `@tipoCanal = ''` vs. `@tipoCanal = NULL`.
+
+**Solución**: se extendió la misma conversión `|| null` del `jsonBody` en `Tool - Consultar Ventas` a los tres campos que faltaban (`cliente`, `producto`, `tipoCanal`), no solo a las fechas, y se volvió a publicar el sub-workflow. Con esto, la pregunta original devolvió 10 filas reales y el copiloto respondió correctamente: *"La unidad de medida para el producto 20715-Tipo Taxisco rallado de 100g en los registros disponibles es Unidad."*
+
+**Lección general**: el problema #6 no era exclusivo de los campos de fecha — es un problema del **puente AI Agent → API** en general: cualquier parámetro "no mencionado" llega como `""`, nunca como `null`. Si un filtro usa igualdad exacta (`=`) en vez de `LIKE`, un string vacío no es inofensivo como en una búsqueda parcial: excluye toda la tabla en silencio, sin ningún error visible. Al agregar un nuevo parámetro opcional a una herramienta de este tipo, hay que aplicar la conversión `|| null` a **todos** los campos opcionales desde el principio, no solo a los que fallarían de forma ruidosa (fechas/números) — los campos de texto con comparación exacta fallan de forma silenciosa y son más fáciles de pasar por alto.
+
+## Qué preguntas funcionan bien ahora mismo
+
+- ✅ **Cualquier pregunta de ventas**, con o sin fecha específica — si no se menciona fecha, el copiloto/la API asume automáticamente "últimos 30 días" en vez de escanear todo el histórico.
 - ✅ **Preguntas con un rango de fechas concreto** que sí tenga datos reales (ej. algo en septiembre 2025) — funcionan de punta a punta, confirmado con resultados reales.
-- ⚠️ **Preguntas sin ninguna fecha** ("ventas recientes", "dame algunas ventas", "sin filtros") — hoy en día terminan casi siempre en el timeout de arriba. No es un límite del copiloto en sí, es el rendimiento de la consulta sin acotar.
 - ✅ El copiloto **no inventa datos** en ningún caso — ya sea que la herramienta devuelva 0 filas o falle, nunca fabrica una respuesta con productos/cifras que no existen.
+- ✅ **Preguntas de atributos de producto redactadas de forma conceptual** ("qué unidad de medida tiene...", "cuánto cuesta...") — el agente elige correctamente `Consultar Ventas` en vez de `Buscar Conocimiento` (ver problema #8).
+- ✅ **Preguntas sin cliente/producto/canal específico** — el agente deja esos filtros vacíos y la herramienta los convierte a `null` antes de llegar a SQL Server, en vez de excluir todas las filas por comparar contra `''` (ver problema #9).
+- ⚠️ Sigue pendiente un detalle menor: si la herramienta llegara a fallar por cualquier otra razón, el copiloto responde igual "No encontré resultados con esos filtros" tanto para "0 filas genuinas" como para "error real" — no son lo mismo, pero el `systemMessage` actual no distingue entre ambos casos al redactar la respuesta. Con el timeout ya resuelto esto es mucho menos probable que ocurra, pero sigue siendo una mejora pendiente del prompt.
 
 ## Qué quedó demostrado funcionando de verdad
 
 A pesar de los tropiezos de arriba, se confirmó con ejecuciones reales:
 
-- El agente decide correctamente qué herramienta usar según la pregunta.
+- El agente decide correctamente qué herramienta usar según la pregunta, incluso preguntas de producto redactadas de forma conceptual.
 - Con parámetros de fecha concretos, la llamada a `Consultar Ventas` corre de punta a punta (Chat → Agent → sub-workflow → Login → ApiKnowledge → SQL Server → respuesta del agente).
 - El agente no alucina cuando se le instruye explícitamente no hacerlo.
+- Una pregunta real de un usuario del equipo (*"Que unidad de medida tiene el producto 20715-Tipo Taxisco rallado de 100g"*), que originalmente falló en producción, ahora se responde correctamente con datos reales (10 filas devueltas por SQL Server) — confirmado end-to-end después de los arreglos #8 y #9.
 - Todo esto corriendo **100% local** (LM Studio + n8n en Docker + ApiKnowledge + SQL Server + Postgres), sin ninguna llamada a un proveedor de IA en la nube.

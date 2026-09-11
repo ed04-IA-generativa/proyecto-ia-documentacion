@@ -688,26 +688,34 @@ public class VentasService(IConfiguration configuration) : ViewQueryExecutor(con
 {
     public async Task<ApiResponseModel<List<VentaM>>> ConsultarVentas(CriterioVentasM criterio)
     {
+        // Si no viene rango de fechas, se usa un default de ultimos 30 dias (no NULL) -
+        // ver la nota de rendimiento mas abajo.
+        DateTime fechaInicio = criterio.FechaInicio ?? DateTime.Today.AddDays(-30);
+        DateTime fechaFin = criterio.FechaFin ?? DateTime.Now;
+
         const string sql = """
             SELECT Fecha_Documento, Producto, UM, Clase, Vendedor, Cliente, Documento, Consecutivo,
                    TipoTransaccion, SerieDocto, VtaSinIva, Cantidad, TipoCliente, Localizacion,
                    TipoCanalDescripcion, Cuenta_Correntista, Cuenta_Cta, Bodega, Documento_Nombre,
                    GPS_Latitud, GPS_Longitud
             FROM [proyIA].[viwConsultaVentas]
-            WHERE (@fechaInicio IS NULL OR Fecha_Documento >= @fechaInicio)
-              AND (@fechaFin IS NULL OR Fecha_Documento <= @fechaFin)
+            WHERE Fecha_Documento >= @fechaInicio
+              AND Fecha_Documento <= @fechaFin
               AND (@cliente IS NULL OR Cliente LIKE '%' + @cliente + '%')
               AND (@producto IS NULL OR Producto LIKE '%' + @producto + '%')
               AND (@tipoCanal IS NULL OR TipoCanalDescripcion = @tipoCanal)
             ORDER BY Fecha_Documento DESC
-            OFFSET 0 ROWS FETCH NEXT @topN ROWS ONLY;
+            OFFSET 0 ROWS FETCH NEXT @topN ROWS ONLY
+            OPTION (RECOMPILE);
             """;
         // ... arma los SqlParameter y llama ExecuteQueryAsync("proyIA.viwConsultaVentas", sql, VentaM.MapToModel, parameters)
     }
 }
 ```
 
-Todos los filtros de `CriterioVentasM` son opcionales (`@parametro IS NULL OR columna = @parametro`); la vista ya trae su propio filtro base, así que estos solo lo acotan más. `TopN` (default 500) evita traer resultados sin límite — se implementa con `OFFSET ... FETCH NEXT`, el estándar de paginación de SQL Server moderno.
+`Cliente`, `Producto` y `TipoCanal` siguen siendo opcionales de verdad (`@parametro IS NULL OR columna = @parametro`); la vista ya trae su propio filtro base, así que estos solo lo acotan más. `Fecha_Documento`, en cambio, **ya no acepta `NULL`** — siempre lleva un rango real (últimos 30 días si no se especifica otro). `TopN` evita traer resultados sin límite — se implementa con `OFFSET ... FETCH NEXT`, el estándar de paginación de SQL Server moderno.
+
+⚠️ **Por qué la fecha no es `NULL OR ...` como los demás filtros**: se probó así originalmente, y una consulta sin ningún límite de fecha provocaba que SQL Server escaneara `tbl_Documento` casi por completo (~87,000 lecturas lógicas medidas con `SET STATISTICS IO`) para poder ordenar/limitar por `Fecha_Documento` — terminaba en timeout real. El patrón `(@fechaInicio IS NULL OR ...)` es un anti-patrón conocido de SQL Server ("parámetros opcionales"): el motor compila un solo plan válido para cualquier combinación de nulos y casi siempre descarta el índice existente (`INX_Fecha_Documento`). La solución fue forzar siempre un rango real (default 30 días) y agregar `OPTION (RECOMPILE)` para que el resto de filtros opcionales sí generen un plan ajustado a los valores reales de cada llamada. Con esto, la misma consulta pasó de ~16.7s a ~0-2ms. El detalle completo de cómo se diagnosticó (con los números de `SET STATISTICS IO`) está en `N8N-Workflow-Copiloto-IA-Agent.md`.
 
 ```csharp
 // Controllers/Ventas/VentasController.cs

@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 230" width="960" height="230" role="img"
+     aria-label="Usuario pregunta al Copiloto IA, que llama la herramienta Consultar Ventas, la cual pide a ApiKnowledge que consulte SQL Server; la respuesta regresa por el mismo camino al usuario.">
+  <style>
+    text { font-family: 'IBM Plex Mono', Consolas, monospace; }
+    .node-title { font-size: 11px; font-weight: 600; fill: #1b2320; }
+    .node-sub { font-size: 9.5px; fill: #59645d; }
+    .edge-label { font-size: 9.5px; font-weight: 500; fill: #59645d; }
+  </style>
+  <rect x="0" y="0" width="960" height="230" fill="#ffffff"/>
+
+  <defs>
+    <marker id="arr1" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#59645d"/>
+    </marker>
+    <marker id="arr1a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#0e7d76"/>
+    </marker>
+  </defs>
+
+  <line x1="170" y1="70" x2="208" y2="70" stroke="#59645d" stroke-width="1.5" marker-end="url(#arr1)"/>
+  <text class="edge-label" x="189" y="28" text-anchor="middle">pregunta</text>
+
+  <line x1="360" y1="70" x2="398" y2="70" stroke="#59645d" stroke-width="1.5" marker-end="url(#arr1)"/>
+  <text class="edge-label" x="379" y="28" text-anchor="middle">elige herramienta</text>
+
+  <line x1="550" y1="70" x2="588" y2="70" stroke="#59645d" stroke-width="1.5" marker-end="url(#arr1)"/>
+  <text class="edge-label" x="569" y="17" text-anchor="middle">1. Login → JWT</text>
+  <text class="edge-label" x="569" y="28" text-anchor="middle">2. /ventas/consultar</text>
+
+  <line x1="740" y1="70" x2="778" y2="70" stroke="#59645d" stroke-width="1.5" marker-end="url(#arr1)"/>
+  <text class="edge-label" x="759" y="28" text-anchor="middle">SELECT (índice)</text>
+
+  <path d="M855,100 L855,168 L95,168 L95,100" fill="none" stroke="#0e7d76" stroke-width="1.5" stroke-dasharray="1 4" stroke-linecap="round" marker-end="url(#arr1a)"/>
+  <text class="edge-label" x="475" y="183" text-anchor="middle" fill="#0e7d76">respuesta al usuario · ~1.4s</text>
+
+  <g>
+    <rect x="20" y="40" width="150" height="60" rx="9" fill="#f5f6f2" stroke="#97a59d" stroke-width="1.4"/>
+    <text class="node-title" x="95" y="66" text-anchor="middle">Usuario</text>
+    <text class="node-sub" x="95" y="82" text-anchor="middle">chat en vivo</text>
+  </g>
+  <g>
+    <rect x="210" y="40" width="150" height="60" rx="9" fill="#f5f6f2" stroke="#97a59d" stroke-width="1.4"/>
+    <text class="node-title" x="285" y="66" text-anchor="middle">Copiloto IA</text>
+    <text class="node-sub" x="285" y="82" text-anchor="middle">AI Agent · n8n</text>
+  </g>
+  <g>
+    <rect x="400" y="40" width="150" height="60" rx="9" fill="#f5f6f2" stroke="#97a59d" stroke-width="1.4"/>
+    <text class="node-title" x="475" y="66" text-anchor="middle">Consultar Ventas</text>
+    <text class="node-sub" x="475" y="82" text-anchor="middle">Tool · n8n</text>
+  </g>
+  <g>
+    <rect x="590" y="40" width="150" height="60" rx="9" fill="#f5f6f2" stroke="#97a59d" stroke-width="1.4"/>
+    <text class="node-title" x="665" y="66" text-anchor="middle">ventas/consultar</text>
+    <text class="node-sub" x="665" y="82" text-anchor="middle">ApiKnowledge · [Authorize]</text>
+  </g>
+  <g>
+    <rect x="780" y="40" width="150" height="60" rx="9" fill="#f5f6f2" stroke="#97a59d" stroke-width="1.4"/>
+    <text class="node-title" x="855" y="66" text-anchor="middle">viwConsultaVentas</text>
+    <text class="node-sub" x="855" y="82" text-anchor="middle">SQL Server</text>
+  </g>
+</svg>

@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1060 230" width="1060" height="230" role="img"
+     aria-label="Usuario pregunta al Copiloto IA, que llama la herramienta Buscar Conocimiento; esta genera un embedding en LM Studio y busca en ApiKnowledge sobre Postgres con pgvector; la respuesta regresa por el mismo camino.">
+  <style>
+    text { font-family: 'IBM Plex Mono', Consolas, monospace; }
+    .node-title { font-size: 11px; font-weight: 600; fill: #1b2320; }
+    .node-sub { font-size: 9.5px; fill: #59645d; }
+    .edge-label { font-size: 9.5px; font-weight: 500; fill: #59645d; }
+  </style>
+  <rect x="0" y="0" width="1060" height="230" fill="#ffffff"/>
+
+  <defs>
+    <marker id="arr2" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#59645d"/>
+    </marker>
+    <marker id="arr2a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#0e7d76"/>
+    </marker>
+  </defs>
+
+  <line x1="165" y1="70" x2="188" y2="70" stroke="#59645d" stroke-width="1.5" marker-end="url(#arr2)"/>
+  <text class="edge-label" x="177" y="28" text-anchor="middle">pregunta conceptual</text>
+
+  <line x1="340" y1="70" x2="363" y2="70" stroke="#59645d" stroke-width="1.5" marker-end="url(#arr2)"/>
+  <text class="edge-label" x="352" y="28" text-anchor="middle">elige herramienta</text>
+
+  <line x1="515" y1="70" x2="538" y2="70" stroke="#59645d" stroke-width="1.5" marker-end="url(#arr2)"/>
+  <text class="edge-label" x="527" y="17" text-anchor="middle">1. Login → JWT</text>
+  <text class="edge-label" x="527" y="28" text-anchor="middle">2. texto a vectorizar</text>
+
+  <line x1="690" y1="70" x2="713" y2="70" stroke="#59645d" stroke-width="1.5" marker-end="url(#arr2)"/>
+  <text class="edge-label" x="702" y="17" text-anchor="middle">embedding 768d</text>
+  <text class="edge-label" x="702" y="28" text-anchor="middle">3. Bearer JWT →</text>
+
+  <line x1="865" y1="70" x2="888" y2="70" stroke="#59645d" stroke-width="1.5" marker-end="url(#arr2)"/>
+  <text class="edge-label" x="877" y="28" text-anchor="middle">similaridad coseno</text>
+
+  <path d="M965,100 L965,168 L90,168 L90,100" fill="none" stroke="#0e7d76" stroke-width="1.5" stroke-dasharray="1 4" stroke-linecap="round" marker-end="url(#arr2a)"/>
+  <text class="edge-label" x="527" y="183" text-anchor="middle" fill="#0e7d76">respuesta al usuario</text>
+
+  <g>
+    <rect x="15" y="40" width="150" height="60" rx="9" fill="#f5f6f2" stroke="#97a59d" stroke-width="1.4"/>
+    <text class="node-title" x="90" y="66" text-anchor="middle">Usuario</text>
+    <text class="node-sub" x="90" y="82" text-anchor="middle">chat en vivo</text>
+  </g>
+  <g>
+    <rect x="190" y="40" width="150" height="60" rx="9" fill="#f5f6f2" stroke="#97a59d" stroke-width="1.4"/>
+    <text class="node-title" x="265" y="66" text-anchor="middle">Copiloto IA</text>
+    <text class="node-sub" x="265" y="82" text-anchor="middle">AI Agent · n8n</text>
+  </g>
+  <g>
+    <rect x="365" y="40" width="150" height="60" rx="9" fill="#f5f6f2" stroke="#97a59d" stroke-width="1.4"/>
+    <text class="node-title" x="440" y="66" text-anchor="middle">Buscar Conocimiento</text>
+    <text class="node-sub" x="440" y="82" text-anchor="middle">Tool · n8n</text>
+  </g>
+  <g>
+    <rect x="540" y="40" width="150" height="60" rx="9" fill="#f5f6f2" stroke="#97a59d" stroke-width="1.4"/>
+    <text class="node-title" x="615" y="66" text-anchor="middle">nomic-embed-text</text>
+    <text class="node-sub" x="615" y="82" text-anchor="middle">LM Studio · sin auth</text>
+  </g>
+  <g>
+    <rect x="715" y="40" width="150" height="60" rx="9" fill="#f5f6f2" stroke="#97a59d" stroke-width="1.4"/>
+    <text class="node-title" x="790" y="66" text-anchor="middle">conocimiento/buscar</text>
+    <text class="node-sub" x="790" y="82" text-anchor="middle">ApiKnowledge · [Authorize]</text>
+  </g>
+  <g>
+    <rect x="890" y="40" width="150" height="60" rx="9" fill="#f5f6f2" stroke="#97a59d" stroke-width="1.4"/>
+    <text class="node-title" x="965" y="66" text-anchor="middle">conocimiento_documento</text>
+    <text class="node-sub" x="965" y="82" text-anchor="middle">Postgres · pgvector</text>
+  </g>
+</svg>

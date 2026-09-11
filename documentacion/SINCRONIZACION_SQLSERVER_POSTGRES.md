@@ -151,3 +151,11 @@ indexen datos que sí cambien seguido (por ejemplo Finanzas o Inventario).
   llama cuando detecta un cambio relevante?
 - ¿Se necesita un mecanismo para saber qué documentos ya están indexados y evitar volver a
   procesar todo desde cero en cada corrida?
+
+## Aplicación concreta: Ventas
+
+[`PROPUESTA-Sincronizacion-Ventas-Vectorial.md`](PROPUESTA-Sincronizacion-Ventas-Vectorial.md)
+aplica los principios de este documento a un caso concreto — sincronizar
+`proyIA.viwConsultaVentas` hacia Postgres usando las herramientas que **ya existen hoy**
+(ApiKnowledge, n8n, LM Studio), con sincronización incremental por watermark. Sigue siendo una
+propuesta de diseño, no una decisión tomada ni algo implementado.

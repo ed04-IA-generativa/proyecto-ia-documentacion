@@ -51,7 +51,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ { 'fechaInicio': $('Cuando se llama esta herramienta').item.json.fechaInicio || null, 'fechaFin': $('Cuando se llama esta herramienta').item.json.fechaFin || null, 'cliente': $('Cuando se llama esta herramienta').item.json.cliente, 'producto': $('Cuando se llama esta herramienta').item.json.producto, 'tipoCanal': $('Cuando se llama esta herramienta').item.json.tipoCanal, 'topN': $('Cuando se llama esta herramienta').item.json.topN ? Number($('Cuando se llama esta herramienta').item.json.topN) : 10 } }}",
+        "jsonBody": "={{ { 'fechaInicio': $('Cuando se llama esta herramienta').item.json.fechaInicio || null, 'fechaFin': $('Cuando se llama esta herramienta').item.json.fechaFin || null, 'cliente': $('Cuando se llama esta herramienta').item.json.cliente || null, 'producto': $('Cuando se llama esta herramienta').item.json.producto || null, 'tipoCanal': $('Cuando se llama esta herramienta').item.json.tipoCanal || null, 'topN': $('Cuando se llama esta herramienta').item.json.topN ? Number($('Cuando se llama esta herramienta').item.json.topN) : 10 } }}",
         "options": { "allowUnauthorizedCerts": true }
       }
     }
